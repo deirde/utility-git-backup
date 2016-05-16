@@ -66,7 +66,7 @@ namespace Deirde\GitBackup {
 
             }
 
-            $this->report('Fully executed in seconds > ' . (round(microtime(true) - $this->time, 2)));
+            $this->report('Executed in seconds > ' . (round(microtime(true) - $this->time, 2)));
 
         }
 
