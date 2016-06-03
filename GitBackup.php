@@ -83,16 +83,16 @@ namespace Deirde\GitBackup {
         public function dumpMySQL($name, $root, $dir, $psw, $uid, $db, $date) {
 
             chdir($root . DIRECTORY_SEPARATOR);
-
+            
             foreach (explode('/', $dir) as $_) {
 
-                if (!file_exists($_)) {
-
+                if (!file_exists($_ . DIRECTORY_SEPARATOR)) {
+                    
                     mkdir($_ . DIRECTORY_SEPARATOR);
 
-                    chdir($_ . DIRECTORY_SEPARATOR);
-
                 }
+                
+                chdir($_ . DIRECTORY_SEPARATOR);
 
             }
 
