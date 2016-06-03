@@ -191,13 +191,13 @@ namespace Deirde\GitBackup {
 
             chdir($root . DIRECTORY_SEPARATOR);
 
-            if (!file_exists('README.md')) {
+            if (!file_exists('readme.md')) {
 
                 $lns = array(
                     '# ' . strtoupper($name) . ' #',
                     '@TODO'
                 );
-                $file = fopen('README.md', 'w');
+                $file = fopen('readme.md', 'w');
                 $content = '';
                 foreach ($lns as $ln) {
                     $content .= $ln  . "\r\n";
@@ -205,11 +205,11 @@ namespace Deirde\GitBackup {
                 fwrite($file, $content);
                 fclose($file);
 
-                $output = $name . ' > ' . 'README.md created!';
+                $output = $name . ' > ' . 'readme.md created!';
 
             } else {
 
-                $output = $name . ' > ' . 'README.md already exists, skipped.';
+                $output = $name . ' > ' . 'readme.md already exists, skipped.';
 
             }
 
