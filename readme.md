@@ -6,8 +6,8 @@ This tool is intended to automate a simple GIT process through a cron procedure.
 
 Requirements
 --------------------
-1. Bitbucket account
-2. Root server with the GIT service installed and configured
+1. Bitbucket or Github account
+2. Root server with the GIT service
 
 
 Configuration
@@ -18,8 +18,3 @@ The configuration is the file "/confg-sample.php" that must copied in "/config.p
 Usage
 --------------------
 <code>/bin/sh git-backup.sh</code>
-
-
-Note
---------------------
-Github will be supported shortly.

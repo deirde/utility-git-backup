@@ -54,8 +54,11 @@ namespace Deirde\GitBackup {
                     $this->gitFtpIgnore($project['root'], $project['name']);
                     $this->readMe($project['root'], $project['name']);
 
-                    $provider = $this->config['providers'][$project['git']['provider']];
-                    $this->git($project['root'], $project['name'], $provider['uid'], $provider['psw'],
+                    $provider = array(
+                       $project['git']['provider'] => $this->config['providers'][$project['git']['provider']]    
+                    );
+                    
+                    $this->git($provider, $project['root'], $project['name'], $provider['uid'], $provider['psw'],
                         $provider['folder'], $project['git']['branch']);
 
                 }
@@ -228,26 +231,41 @@ namespace Deirde\GitBackup {
          * @param null $folder
          * @param $branch
          */
-        public function git($root, $name, $uid, $psw, $folder = null, $branch) {
-
+        public function git($provider, $root, $name, $uid, $psw, $folder = null, $branch) {
+            
             chdir($root . DIRECTORY_SEPARATOR);
 
-            $commands = array(
-
-                'curl -k --user ' . $uid . ":" . $psw .
+            $commands = array();
+            
+            if (key($provider) == 'bitbucket') {
+                $commands[] = 'curl -k --user ' . $uid . ":" . $psw .
                 ' https://api.bitbucket.org/1.0/repositories/ --data name=' . $name .
                 " --data is_private='true' " . (($folder) ? '--data owner=' .
-                    $folder : null),
+                    $folder : null);
+            } elseif (key($provider) == 'github') {
+                $commands[] = "curl -XPOST -H 'Authorization: token " . $provider['github']['token'] . "' https://api.github.com/user/repos -d '{\"name\":\"" . $name . "\",\"description\":\"\", \"private\": true}'";
+            }
+            
+            $commands[] = 'git init';
+            $commands[] = 'git add --all';
+            $commands[] = 'git commit -m "GitBackup auto-update <' . $branch . '> branch"';
+            
+            if (key($provider) == 'bitbucket') {
+                $commands[] = 'git remote add origin git@bitbucket.org:' . 
+                    $folder . DIRECTORY_SEPARATOR . $name . '.git';
+            } elseif (key($provider) == 'github') {
+                $commands[] = 'git remote add origin git@github.com:' . $provider['github']['uid'] . DIRECTORY_SEPARATOR . $name . '.git';
+            }
+            
+            
+            $commands[] = 'git branch ' . $branch;
+            $commands[] = 'git checkout ' . $branch;
+            $commands[] = 'git push -u origin ' . $branch;
 
-                'git init',
-                'git add --all',
-                'git commit -m "GitBackup auto-update <' . $branch . '> branch"',
-                'git remote add origin git@bitbucket.org:' . $folder . DIRECTORY_SEPARATOR . $name . '.git',
-                'git branch ' . $branch,
-                'git checkout ' . $branch,
-                'git push -u origin ' . $branch,
-            );
+            $this->report($output);
 
+            $this->output['report'][$name][] = $output;
+    
             $output = $name . ' > ' . 'Git backup on progress..';
 
             $this->report($output);
@@ -257,10 +275,6 @@ namespace Deirde\GitBackup {
             $this->exec($name, $commands);
 
             $output = $name . ' > ' . 'Git backup completed!';
-
-            $this->report($output);
-
-            $this->output['report'][$name][] = $output;
 
         }
 

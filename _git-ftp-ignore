@@ -25,4 +25,6 @@ var/\.*
 ssl.cert
 ssl.key
 nginx.conf
+.gitignore
 .git-ftp-ignore
+readme.md

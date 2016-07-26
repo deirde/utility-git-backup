@@ -1,2 +1,2 @@
 #!/bin/sh -e
-php GitBackup.php
+php /home/.utility-git-backup/GitBackup.php

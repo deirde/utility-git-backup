@@ -9,9 +9,9 @@ return [
             'psw' => '',
             'folder' => '',
         ],
-        'github' => [ //@TODO
+        'github' => [
             'uid' => '',
-            'psw' => '',
+            'token' => '', // Must be generated in the Github account section.
         ]
     ],
     'projects' => [
