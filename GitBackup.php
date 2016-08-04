@@ -11,21 +11,22 @@ namespace Deirde\GitBackup {
         /**
          * GitBackup constructor.
          * @param array $config
+         * return null
          */
         public function __construct(array $config) {
 
-            $this->config = $config;
-
+            $this->config = $this->triggers($config);
+            
             $this->time = microtime(true);
 
         }
 
         /**
          * Error handler
-         * @param $errno
-         * @param $errstr
-         * @param $errfile
-         * @param $errline
+         * @param $errno as integer
+         * @param $errstr as string
+         * @param $errfile as string
+         * @param $errline as integer
          * @return null
          */
         public function error($errno, $errstr, $errfile, $errline) {
@@ -33,12 +34,47 @@ namespace Deirde\GitBackup {
             return null;
 
         }
+        
+        /**
+         * Triggers
+         * @param $config as array
+         * @return array
+         */
+        private function triggers($config) {
+            
+            if (isset($config['root']) && 
+                isset($config['trigger'])) {
+            
+                $directory = $config['root'];
+                $fileSPLObjects = new \RecursiveDirectoryIterator($directory);
+                $fileSPLObjects =  new \RecursiveIteratorIterator(
+                    new \RecursiveDirectoryIterator($directory),
+                    \RecursiveIteratorIterator::CHILD_FIRST,
+                    \RecursiveDirectoryIterator::SKIP_DOTS
+                );
+                try {
+                    foreach($fileSPLObjects as $fullFileName => $fileSPLObject) {
+                        if (strpos($fullFileName, '/home/.') === false && 
+                            $fileSPLObject->getFilename() == $config['trigger']) {
+                            $config['projects'][] = include($fullFileName);
+                        }
+                    }
+                }
+                catch (UnexpectedValueException $e) {
+                    printf("Directory [%s] contained a directory we can not recurse into", $directory);
+                }
+                
+            }
+            
+            return $config;
+            
+        }
 
         /**
          * Run!
          */
         public function run() {
-
+            
             foreach ($this->config['projects'] as $project) {
 
                 if (isset($project['mysql'])) {
@@ -47,18 +83,25 @@ namespace Deirde\GitBackup {
                         $project['mysql']['uid'], $project['mysql']['name'],
                         $project['mysql']['date']);
                 }
+                
+                if (isset($project['git-ftp'])) {
+                    $this->gitFtp($project['name'], $project['root'], 
+                        $project['git-ftp']);
+                    $this->gitFtpIgnore($project['root'], $project['name']);
+                }
 
                 if (isset($project['git'])) {
 
                     $this->gitIgnore($project['root'], $project['name']);
-                    $this->gitFtpIgnore($project['root'], $project['name']);
                     $this->readMe($project['root'], $project['name']);
 
                     $provider = array(
-                       $project['git']['provider'] => $this->config['providers'][$project['git']['provider']]    
+                        $project['git']['provider'] => 
+                        $this->config['providers'][$project['git']['provider']]    
                     );
                     
-                    $this->git($provider, $project['root'], $project['name'], $provider['uid'], $provider['psw'],
+                    $this->git($provider, $project['root'], $project['name'],
+                        $provider['uid'], $provider['psw'],
                         $provider['folder'], $project['git']['branch']);
 
                 }
@@ -69,21 +112,23 @@ namespace Deirde\GitBackup {
 
             }
 
-            $this->report('Executed in seconds > ' . (round(microtime(true) - $this->time, 2)));
+            $this->report('Executed in seconds > ' . 
+                (round(microtime(true) - $this->time, 2)));
 
         }
 
         /**
          * MySQL database dumper.
-         * @param $name
-         * @param $root
-         * @param $dir
-         * @param $psw
-         * @param $uid
-         * @param $db
-         * @param $date
+         * @param $name as string
+         * @param $root as string
+         * @param $dir as string
+         * @param $psw as string
+         * @param $uid as string
+         * @param $db as string
+         * @param $date as string
+         * @return null
          */
-        public function dumpMySQL($name, $root, $dir, $psw, $uid, $db, $date) {
+        private function dumpMySQL($name, $root, $dir, $psw, $uid, $db, $date) {
 
             chdir($root . DIRECTORY_SEPARATOR);
             
@@ -127,17 +172,18 @@ namespace Deirde\GitBackup {
 
         /**
          * File <.gitignore> creator.
-         * @param $root
-         * @param $name
+         * @param $root as string
+         * @param $name as string
+         * @return null
          */
-        public function gitIgnore($root, $name) {
+        private function gitIgnore($root, $name) {
 
             chdir(dirname($root . DIRECTORY_SEPARATOR));
 
             if (!file_exists($root . DIRECTORY_SEPARATOR . '.gitignore')) {
 
-                $commands[] = 'cp  ' . dirname(__FILE__) . DIRECTORY_SEPARATOR . '_gitignore ' .
-                    $root . DIRECTORY_SEPARATOR . '.gitignore';
+                $commands[] = 'cp  ' . dirname(__FILE__) . DIRECTORY_SEPARATOR .
+                    '_gitignore ' . $root . DIRECTORY_SEPARATOR . '.gitignore';
 
                 $this->exec($name, $commands);
 
@@ -157,17 +203,19 @@ namespace Deirde\GitBackup {
 
         /**
          * File <.git-ftp-ignore> creator.
-         * @param $root
-         * @param $name
+         * @param $root as string
+         * @param $name as string
+         * @return null
          */
-        public function gitFtpIgnore($root, $name) {
+        private function gitFtpIgnore($root, $name) {
 
             chdir(dirname($root . DIRECTORY_SEPARATOR));
 
             if (!file_exists($root . DIRECTORY_SEPARATOR . '.git-ftp-ignore')) {
 
-                $commands[] = 'cp  ' . dirname(__FILE__) . DIRECTORY_SEPARATOR . '_git-ftp-ignore ' .
-                    $root . DIRECTORY_SEPARATOR . '.git-ftp-ignore';
+                $commands[] = 'cp  ' . dirname(__FILE__) . DIRECTORY_SEPARATOR . 
+                    '_git-ftp-ignore ' . $root . DIRECTORY_SEPARATOR .
+                    '.git-ftp-ignore';
 
                 $this->exec($name, $commands);
 
@@ -187,10 +235,11 @@ namespace Deirde\GitBackup {
 
         /**
          * File <README.md> creator.
-         * @param $root
-         * @param $name
+         * @param $root as string
+         * @param $name as string
+         * @return null
          */
-        public function readMe($root, $name) {
+        private function readMe($root, $name) {
 
             chdir($root . DIRECTORY_SEPARATOR);
 
@@ -221,17 +270,45 @@ namespace Deirde\GitBackup {
             $this->output['report'][$name][] = $output;
 
         }
+        
+        /**
+         * Setup the gitFtp service.
+         * @param $name as string
+         * @param $root as string
+         * @param $gitFtp as array
+         * return null
+         */
+        private function gitFtp($name, $root, $gitFtp) {
+            
+            chdir($root . DIRECTORY_SEPARATOR);
+            
+            $commands[] = 'git config git-ftp.url ' . $gitFtp['url'];
+            $commands[] = 'git config git-ftp.user ' . $gitFtp['user'];
+            $commands[] = 'git config git-ftp.password ' . $gitFtp['password'];
+
+            $this->output['report'][$name][] = $output;
+    
+            $output = $name . ' > ' . 'Git-ftp setup completed!';
+            
+            $this->report($output);
+            
+            $this->exec($name, $commands);
+            
+        }
 
         /**
          * Git backup process.
-         * @param $root
-         * @param $name
-         * @param $uid
-         * @param $psw
-         * @param null $folder
-         * @param $branch
+         * @param $root as string
+         * @param $root as string
+         * @param $name as string
+         * @param $uid as string
+         * @param $psw as String
+         * @param null $folder as string
+         * @param $branch as string
+         * @return null
          */
-        public function git($provider, $root, $name, $uid, $psw, $folder = null, $branch) {
+        private function git($provider, $root, $name, $uid, $psw, 
+            $folder = null, $branch) {
             
             chdir($root . DIRECTORY_SEPARATOR);
 
@@ -239,30 +316,33 @@ namespace Deirde\GitBackup {
             
             if (key($provider) == 'bitbucket') {
                 $commands[] = 'curl -k --user ' . $uid . ":" . $psw .
-                ' https://api.bitbucket.org/1.0/repositories/ --data name=' . $name .
-                " --data is_private='true' " . (($folder) ? '--data owner=' .
-                    $folder : null);
+                ' https://api.bitbucket.org/1.0/repositories/ --data name=' .
+                $name . " --data is_private='true' " . (($folder) ?
+                    '--data owner=' . $folder : null);
             } elseif (key($provider) == 'github') {
-                $commands[] = "curl -XPOST -H 'Authorization: token " . $provider['github']['token'] . "' https://api.github.com/user/repos -d '{\"name\":\"" . $name . "\",\"description\":\"\", \"private\": true}'";
+                $commands[] = "curl -XPOST -H 'Authorization: token " . 
+                    $provider['github']['token'] .
+                    "' https://api.github.com/user/repos -d '{\"name\":\"" .
+                    $name . "\",\"description\":\"\", \"private\": true}'";
             }
             
             $commands[] = 'git init';
             $commands[] = 'git add --all';
-            $commands[] = 'git commit -m "GitBackup auto-update <' . $branch . '> branch"';
+            $commands[] = 'git commit -m "GitBackup auto-update <' . 
+                $branch . '> branch"';
             
             if (key($provider) == 'bitbucket') {
                 $commands[] = 'git remote add origin git@bitbucket.org:' . 
                     $folder . DIRECTORY_SEPARATOR . $name . '.git';
             } elseif (key($provider) == 'github') {
-                $commands[] = 'git remote add origin git@github.com:' . $provider['github']['uid'] . DIRECTORY_SEPARATOR . $name . '.git';
+                $commands[] = 'git remote add origin git@github.com:' . 
+                    $provider['github']['uid'] . DIRECTORY_SEPARATOR .
+                        $name . '.git';
             }
-            
             
             $commands[] = 'git branch ' . $branch;
             $commands[] = 'git checkout ' . $branch;
             $commands[] = 'git push -u origin ' . $branch;
-
-            $this->report($output);
 
             $this->output['report'][$name][] = $output;
     
@@ -280,9 +360,11 @@ namespace Deirde\GitBackup {
 
         /**
          * Executes the commands.
-         * @param $commands
+         * @param $name as string
+         * @param $commands as string
+         * @return void
          */
-        public function exec($name, $commands) {
+        private function exec($name, $commands) {
 
             foreach ($commands as $command) {
 
@@ -300,9 +382,10 @@ namespace Deirde\GitBackup {
 
         /**
          * Line command output.
-         * @param $output
+         * @param $output as string
+         * @return null
          */
-        public function report($output) {
+        private function report($output) {
 
             echo $output . PHP_EOL;
 
@@ -310,8 +393,9 @@ namespace Deirde\GitBackup {
 
         /**
          * Send e-mail report.
+         * return null
          */
-        public function mailer() {
+        private function mailer() {
 
             $output = '';
             $message = array();
@@ -322,15 +406,18 @@ namespace Deirde\GitBackup {
 
                 if (strpos($this->output['commands'][$key], 'warning') !== false ||
                     strpos($this->output['commands'][$key], 'error') !== false) {
-                    $message[] = "Attention! Something's wrong on project: " . $key;
+                    $message[] = "Attention! Something's wrong on project: " .
+                        $key;
                 }
 
             }
 
-            if (mail($this->config['to'], 'GitBackup summary', implode('<br/>', $message))) {
+            if (mail($this->config['to'], 'GitBackup summary',
+                implode('<br/>', $message))) {
                 $this->report('Summary sent to > ' . $this->config['to']);
             } else {
-                $this->report('Unable to send the summary to > ' . $this->config['to']);
+                $this->report('Unable to send the summary to > ' .
+                    $this->config['to']);
             }
 
         }

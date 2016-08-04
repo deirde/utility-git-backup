@@ -27,4 +27,5 @@ ssl.key
 nginx.conf
 .gitignore
 .git-ftp-ignore
+gitme.php
 readme.md
