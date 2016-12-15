@@ -90,10 +90,6 @@ namespace Deirde\GitBackup {
                             $mysql['uid'], $mysql['name'],
                             $mysql['date']);
                     }
-                    /*$this->dumpMySQL($project['name'], $project['root'],
-                        $project['mysql']['dir'], $project['mysql']['psw'],
-                        $project['mysql']['uid'], $project['mysql']['name'],
-                        $project['mysql']['date']);*/
                 }
 
                 if (isset($project['git'])) {
