@@ -1,5 +1,6 @@
 .rs/\.*
 .pki/\.*
+/.pki/\.*
 .usermin/\.*
 /default/\.*
 domains/\.*

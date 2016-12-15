@@ -1,0 +1,22 @@
+<?php
+return [
+    'name' => 'my-project.com',
+    'root' => '/home/my-project.com',
+    'git-ftp' => [
+        'url' => 'ftp://11.22.33.44',
+        'user' => 'ftp-user',
+        'password' => 'ftp-password',
+    ],
+    'git' => [
+        'provider' => 'github',
+        'branch' => 'master',
+    ],
+    'mysql' => [
+        'dir' => '.rs/data',
+        'name' => 'database-name',
+        'uid' => 'datanase-username',
+        'psw' => 'username-password',
+        'date' => 'Wy',
+    ]
+];
+?>

@@ -54,7 +54,7 @@ namespace Deirde\GitBackup {
                 );
                 try {
                     foreach($fileSPLObjects as $fullFileName => $fileSPLObject) {
-                        if (strpos($fullFileName, '/home/.') === false && 
+                        if (strpos($fullFileName, '/.c9') === false && 
                             $fileSPLObject->getFilename() == $config['trigger']) {
                             $config['projects'][] = include($fullFileName);
                         }
@@ -76,18 +76,24 @@ namespace Deirde\GitBackup {
         public function run() {
             
             foreach ($this->config['projects'] as $project) {
-
-                if (isset($project['mysql'])) {
-                    $this->dumpMySQL($project['name'], $project['root'],
-                        $project['mysql']['dir'], $project['mysql']['psw'],
-                        $project['mysql']['uid'], $project['mysql']['name'],
-                        $project['mysql']['date']);
-                }
                 
                 if (isset($project['git-ftp'])) {
                     $this->gitFtp($project['name'], $project['root'], 
                         $project['git-ftp']);
                     $this->gitFtpIgnore($project['root'], $project['name']);
+                }
+
+                if (isset($project['mysql'])) {
+                    foreach ($project['mysql'] as $mysql) {
+                        $this->dumpMySQL($project['name'], $project['root'],
+                            $mysql['dir'], $mysql['psw'],
+                            $mysql['uid'], $mysql['name'],
+                            $mysql['date']);
+                    }
+                    /*$this->dumpMySQL($project['name'], $project['root'],
+                        $project['mysql']['dir'], $project['mysql']['psw'],
+                        $project['mysql']['uid'], $project['mysql']['name'],
+                        $project['mysql']['date']);*/
                 }
 
                 if (isset($project['git'])) {
@@ -116,6 +122,77 @@ namespace Deirde\GitBackup {
                 (round(microtime(true) - $this->time, 2)));
 
         }
+        
+        /**
+         * Setup the gitFtp service.
+         * @param $name as string
+         * @param $root as string
+         * @param $gitFtp as array
+         * return null
+         */
+        private function gitFtp($name, $root, $gitFtp) {
+            
+            chdir($root . DIRECTORY_SEPARATOR);
+            
+            $commands[] = 'git config git-ftp.url ' . $gitFtp['url'];
+            $commands[] = 'git config git-ftp.user ' . $gitFtp['user'];
+            $commands[] = 'git config git-ftp.password ' . $gitFtp['password'];
+            
+            $output = $name . ' > ' . 'Git-ftp setup completed!';
+
+            $this->output['report'][$name][] = $output;
+            
+            $this->report($output);
+            
+            $output = $name . ' > ' . 'git ftp pull on progress..';
+
+            $this->output['report'][$name][] = $output;
+            
+            $this->report($output);
+            
+            $this->exec($name, $commands);
+            
+            exec('git ftp pull' . ' 2>&1', $output, $return_var);
+            
+            $output = $name . ' > ' . 'git ftp pull on completed!';
+
+            $this->output['report'][$name][] = $output;
+            
+            $this->report($output);
+            
+        }
+
+        /**
+         * File <.git-ftp-ignore> creator.
+         * @param $root as string
+         * @param $name as string
+         * @return null
+         */
+        private function gitFtpIgnore($root, $name) {
+
+            chdir(dirname($root . DIRECTORY_SEPARATOR));
+
+            if (!file_exists($root . DIRECTORY_SEPARATOR . '.git-ftp-ignore')) {
+
+                $commands[] = 'cp  ' . dirname(__FILE__) . DIRECTORY_SEPARATOR . 
+                    '_git-ftp-ignore ' . $root . DIRECTORY_SEPARATOR .
+                    '.git-ftp-ignore';
+
+                $this->exec($name, $commands);
+
+                $output = $name . ' > ' . '.git-ftp-ignore created!';
+
+            } else {
+
+                $output = $name . ' > ' . '.git-ftp-ignore already exists, skipped.';
+
+            }
+
+            $this->report($output);
+
+            $this->output['report'][$name][] = $output;
+
+        }
 
         /**
          * MySQL database dumper.
@@ -140,6 +217,7 @@ namespace Deirde\GitBackup {
 
                 }
                 
+                echo $_ . DIRECTORY_SEPARATOR;
                 chdir($_ . DIRECTORY_SEPARATOR);
 
             }
@@ -202,38 +280,6 @@ namespace Deirde\GitBackup {
         }
 
         /**
-         * File <.git-ftp-ignore> creator.
-         * @param $root as string
-         * @param $name as string
-         * @return null
-         */
-        private function gitFtpIgnore($root, $name) {
-
-            chdir(dirname($root . DIRECTORY_SEPARATOR));
-
-            if (!file_exists($root . DIRECTORY_SEPARATOR . '.git-ftp-ignore')) {
-
-                $commands[] = 'cp  ' . dirname(__FILE__) . DIRECTORY_SEPARATOR . 
-                    '_git-ftp-ignore ' . $root . DIRECTORY_SEPARATOR .
-                    '.git-ftp-ignore';
-
-                $this->exec($name, $commands);
-
-                $output = $name . ' > ' . '.git-ftp-ignore created!';
-
-            } else {
-
-                $output = $name . ' > ' . '.git-ftp-ignore already exists, skipped.';
-
-            }
-
-            $this->report($output);
-
-            $this->output['report'][$name][] = $output;
-
-        }
-
-        /**
          * File <README.md> creator.
          * @param $root as string
          * @param $name as string
@@ -270,31 +316,6 @@ namespace Deirde\GitBackup {
             $this->output['report'][$name][] = $output;
 
         }
-        
-        /**
-         * Setup the gitFtp service.
-         * @param $name as string
-         * @param $root as string
-         * @param $gitFtp as array
-         * return null
-         */
-        private function gitFtp($name, $root, $gitFtp) {
-            
-            chdir($root . DIRECTORY_SEPARATOR);
-            
-            $commands[] = 'git config git-ftp.url ' . $gitFtp['url'];
-            $commands[] = 'git config git-ftp.user ' . $gitFtp['user'];
-            $commands[] = 'git config git-ftp.password ' . $gitFtp['password'];
-
-            $this->output['report'][$name][] = $output;
-    
-            $output = $name . ' > ' . 'Git-ftp setup completed!';
-            
-            $this->report($output);
-            
-            $this->exec($name, $commands);
-            
-        }
 
         /**
          * Git backup process.
@@ -304,11 +325,19 @@ namespace Deirde\GitBackup {
          * @param $uid as string
          * @param $psw as String
          * @param null $folder as string
-         * @param $branch as string
+         * @param $branch as array
          * @return null
          */
         private function git($provider, $root, $name, $uid, $psw, 
             $folder = null, $branch) {
+                
+            if (!isset($branch['default'])) {
+                $branch['default'] = 'master';
+            }
+            
+            if (!isset($branch['backup'])) {
+                $branch['backup'] = 'master';
+            }
             
             chdir($root . DIRECTORY_SEPARATOR);
 
@@ -327,9 +356,12 @@ namespace Deirde\GitBackup {
             }
             
             $commands[] = 'git init';
+            $commands[] = 'git branch ' . $branch['backup'];
+            $commands[] = 'git checkout -b ' . $branch['backup'];
+            $commands[] = 'git checkout ' . $branch['backup'];
             $commands[] = 'git add --all';
             $commands[] = 'git commit -m "GitBackup auto-update <' . 
-                $branch . '> branch"';
+                $branch['backup'] . '> branch"';
             
             if (key($provider) == 'bitbucket') {
                 $commands[] = 'git remote add origin git@bitbucket.org:' . 
@@ -340,9 +372,10 @@ namespace Deirde\GitBackup {
                         $name . '.git';
             }
             
-            $commands[] = 'git branch ' . $branch;
-            $commands[] = 'git checkout ' . $branch;
-            $commands[] = 'git push -u origin ' . $branch;
+            $commands[] = 'git push -u origin ' . $branch['backup'];
+            $commands[] = 'git branch ' . $branch['default'];
+            $commands[] = 'git checkout -b ' . $branch['default'];
+            $commands[] = 'git checkout ' . $branch['default'];
 
             $this->output['report'][$name][] = $output;
     

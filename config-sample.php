@@ -11,7 +11,7 @@ return [
         ],
         'github' => [
             'uid' => '',
-            'token' => '', // Must be generated in the Github account section.
+            'token' => '',
         ]
     ],
     'projects' => [
@@ -27,7 +27,7 @@ return [
                 'name' => '',
                 'uid' => '',
                 'psw' => '',
-                'date' => 'Wy', // One file per week.
+                'date' => 'Wy', // Weekly.
             ]
         ]
     ]
